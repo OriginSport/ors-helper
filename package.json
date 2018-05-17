@@ -12,7 +12,8 @@
     "element-ui": "^2.3.8",
     "extend": "^3.0.1",
     "qrcode": "^1.2.0",
-    "vue": "^2.5.16"
+    "vue": "^2.5.16",
+    "web3": "^1.0.0-beta.34"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.0.0-beta.10",
