@@ -83,7 +83,12 @@ export default {
       this.submitFunction(d)
     },
     submitFunction(data) {
-      this.callFunc(data)
+      let d = {}
+      let arr = []
+      d['func'] = data.func
+      arr.push(data.args)
+      d['args'] = JSON.stringify(arr)
+      this.callFunc(d)
     },
     handleSelect(key) {
       this.activeIndex = key
