@@ -64,38 +64,44 @@ export default {
   },
   methods: {
     submitBatchTransfer(data) {
-      let d = {}
-      let arr = []
-      d['func'] = 'batchTransfer'
-      arr.push(data.recipients.split(','))
-      arr.push(data.value)
-      d['args'] = JSON.stringify(arr)
-      this.submitFunction(d)
+      const d = this.formatData(data, 'batchTransfer')
+      this.callFunc(d)
     },
     submitTransfer(data) {
-      let d = {}
-      let arr = []
-      d['func'] = 'transfer'
-      d['args'] = []
-      arr.push(data.recipients)
-      arr.push(data.value)
-      d['args'] = JSON.stringify(arr)
-      this.submitFunction(d)
+      const d = this.formatData(data, 'transfer')
+      this.callFunc(d)
     },
     submitFunction(data) {
       let d = {}
       let arr = []
       d['func'] = data.func
-      arr.push(data.args)
-      d['args'] = JSON.stringify(arr)
+      if (data.args) {
+        arr.push(data.args)
+        d['args'] = JSON.stringify(arr)
+      }
       this.callFunc(d)
+    },
+    formatData(data, name) {
+      let d = {}
+      let arr = []
+      d['func'] = name
+      const recipientsArr = data.recipients.split(',')
+      if (recipientsArr.length > 1) {
+        arr.push(recipientsArr)
+      } else {
+        arr.push(recipientsArr[0])
+      }
+      arr.push(data.value)
+      d['args'] = JSON.stringify(arr)
+      return d
     },
     handleSelect(key) {
       this.activeIndex = key
     },
     async instantiateContract() {
       // const account = Web3Service.selectedAccount;
-      const addr = '0xeb9a4b185816c354db92db09cc3b50be60b901b6'
+      const addr = '0x0a22dccf5bd0faa7e748581693e715afefb2f679' // testnet
+      // const addr = '0xeb9a4b185816c354db92db09cc3b50be60b901b6' // mainnet
       this.token = new Web3Service.web3.eth.Contract(OriginSportToken.abi, addr);
     },
     callFunc(data) {
