@@ -19,8 +19,6 @@
     "@vue/cli-plugin-babel": "^3.0.0-beta.10",
     "@vue/cli-plugin-eslint": "^3.0.0-beta.10",
     "@vue/cli-service": "^3.0.0-beta.10",
-    "node-sass": "^4.9.0",
-    "sass-loader": "^7.0.1",
     "vue-template-compiler": "^2.5.13"
   },
   "babel": {
