@@ -2,12 +2,23 @@
   <el-container>
     <el-header>
     <div class="title">{{title}}</div>
+    <el-dropdown @command="handleCommand">
+        <span class="el-dropdown-link">{{currentNet}}
+        <i class="el-icon-arrow-down el-icon--right"></i>
+      </span>
+      <el-dropdown-menu slot="dropdown">
+        <el-dropdown-item command="a">Mainnet</el-dropdown-item>
+        <el-dropdown-item command="b">Testnet</el-dropdown-item>
+        <el-dropdown-item command="c">DataCenterTest</el-dropdown-item>
+      </el-dropdown-menu>
+    </el-dropdown>
     </el-header>
     <el-main class="main-section">
     <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal" @select="handleSelect">
       <el-menu-item index="1">批量发送糖果</el-menu-item>
       <el-menu-item index="2">发送 Token</el-menu-item>
-      <el-menu-item index="3">执行函数</el-menu-item>
+      <el-menu-item index="3">查询函数</el-menu-item>
+      <el-menu-item index="4">执行函数</el-menu-item>
     </el-menu>
     <transition name="fade">
     <div class="main-card" v-if="activeIndex=='1'">
@@ -18,7 +29,12 @@
         <br>
         <batch-transfer :addressDesc="singleDesc" @submitData="submitTransfer"></batch-transfer>
     </div>
+    <div class="main-card" v-else-if="activeIndex=='3'">
+        <br>
+        <call-func @submitData="callFunction"></call-func>
+    </div>
     <div class="main-card" v-else v-loading="loading" element-loading-text="交易确认中，请耐心等待...">
+        <br>
         <call-func @submitData="submitFunction"></call-func>
     </div>
     </transition>
@@ -37,8 +53,9 @@ import CallFunc from './CallFunc.vue'
 import BatchTransfer from './BatchTransfer.vue'
 import Web3Service from '../services/Web3Service'
 import OriginSportToken from '../contracts/OriginSportToken.json'
-// import {weiToEth, ethToWei, formatEth, formatToken, getStr} from '../utils/ethUtils'
-import {ethToWei} from '../utils/ethUtils'
+import DataCenterJson from '../contracts/DataCenter.json'
+// import { weiToEth, ethToWei, formatEth, formatToken, getStr, getBytes32 } from '../utils/ethUtils'
+import { ethToWei, getBytes32 } from '../utils/ethUtils'
  
 export default {
   data() {
@@ -46,10 +63,26 @@ export default {
       title: 'ORSHelper',
       loading: false,
       listLoading: false,
-      activeIndex: '2',
+      activeIndex: '3',
       batchDesc: '目标地址，最多20个，使用逗号隔开',
       singleDesc: '目标地址（只能填写一个）',
-      token: {},
+      contract: {},
+      currentNet: 'DataCenterTest',
+      //currentNet: 'Testnet',
+      address: {
+        Mainnet: {
+          contractAddress: '0xeb9a4b185816c354db92db09cc3b50be60b901b6',
+          baseUrl: 'https://mainnet.io'
+        },
+        Testnet: {
+          contractAddress: '0x0a22dccf5bd0faa7e748581693e715afefb2f679',
+          baseUrl: 'https://testnet.io'
+        },
+        DataCenterTest: {
+          contractAddress: '0xac659dbd50c7b629cf16081e1223af8919441cb0',
+          baseUrl: 'https://testnet.io'
+        }
+      }
     };
   },
   computed: {
@@ -65,21 +98,23 @@ export default {
   methods: {
     submitBatchTransfer(data) {
       const d = this.formatData(data, 'batchTransfer')
-      this.callFunc(d)
+      this.sendFunc(d)
     },
     submitTransfer(data) {
       const d = this.formatData(data, 'transfer')
-      this.callFunc(d)
+      this.sendFunc(d)
     },
     submitFunction(data) {
       let d = {}
       let arr = []
       d['func'] = data.func
       if (data.args) {
-        arr.push(data.args)
+        data.args.split(',').map(item => {
+          arr.push(item)
+        })
         d['args'] = JSON.stringify(arr)
       }
-      this.callFunc(d)
+      this.sendFunc(d)
     },
     formatData(data, name) {
       let d = {}
@@ -100,14 +135,47 @@ export default {
     },
     async instantiateContract() {
       // const account = Web3Service.selectedAccount;
-      const addr = '0x0a22dccf5bd0faa7e748581693e715afefb2f679' // testnet
-      // const addr = '0xeb9a4b185816c354db92db09cc3b50be60b901b6' // mainnet
-      this.token = new Web3Service.web3.eth.Contract(OriginSportToken.abi, addr);
+      if (this.currentNet !== 'DataCenterTest') {
+        this.contract = new Web3Service.web3.eth.Contract(OriginSportToken.abi, this.address[this.currentNet].contractAddress);
+      } else {
+        this.contract = new Web3Service.web3.eth.Contract(DataCenterJson.abi, this.address[this.currentNet].contractAddress);
+      }
     },
-    callFunc(data) {
+    handleCommand(command) {
+      if (command == 'a') {
+        this.currentNet = 'Mainnet'
+      } else if (command == 'b') {
+        this.currentNet = 'Testnet'
+      } else {
+        this.currentNet = 'DataCenterTest'
+      }
+      this.instantiateContract()
+    },
+    callFunction(data) {
+      this.callFunc(data)
+        .then((data) => {
+          this.$notify({
+            message: data,
+            type: 'success'
+          });
+        })
+        .catch((e) => {
+          console.log(e)
+        })
+    },
+    async callFunc(data) {
+      if (data.args) {
+        const params = data.args.split(',')
+        params[0] = getBytes32(params[0])
+        return await this.contract.methods[data.func](...params).call()
+      } else {
+        return await this.contract.methods[data.func]().call()
+      }
+    },
+    sendFunc(data) {
       console.log(data)
       const value = 0
-      const callFunction = data.func
+      const sendFunction = data.func
 
       const options = {
         from: Web3Service.selectedAccount,
@@ -116,13 +184,16 @@ export default {
 
       let func
       if (data.args) {
-        const callArgs = JSON.parse(data.args)
-        if (callFunction === 'batchTransfer' || callFunction === 'transfer' && callArgs.length === 2) {
-          callArgs[1] = ethToWei(callArgs[1])
+        const sendArgs = JSON.parse(data.args)
+        if (sendFunction === 'batchTransfer' || sendFunction === 'transfer' && sendArgs.length === 2) {
+          sendArgs[1] = ethToWei(sendArgs[1])
         }
-        func = this.token.methods[callFunction](...callArgs)
+        if (this.currentNet === 'DataCenterTest') {
+          sendArgs[0] = getBytes32(sendArgs[0])
+        }
+        func = this.contract.methods[sendFunction](...sendArgs)
       } else {
-        func = this.token.methods[callFunction]()
+        func = this.contract.methods[sendFunction]()
       }
 
       func
