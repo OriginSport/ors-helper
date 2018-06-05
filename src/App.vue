@@ -10,6 +10,7 @@
         <el-dropdown-item command="a">Mainnet</el-dropdown-item>
         <el-dropdown-item command="b">Testnet</el-dropdown-item>
         <el-dropdown-item command="c">DataCenterTest</el-dropdown-item>
+        <el-dropdown-item command="d">AddressResolverTest</el-dropdown-item>
       </el-dropdown-menu>
     </el-dropdown>
     </el-header>
@@ -54,6 +55,7 @@ import BatchTransfer from './BatchTransfer.vue'
 import Web3Service from '../services/Web3Service'
 import OriginSportToken from '../contracts/OriginSportToken.json'
 import DataCenterJson from '../contracts/DataCenter.json'
+import AddressResolverJson from '../contracts/AddressResolver.json'
 // import { weiToEth, ethToWei, formatEth, formatToken, getStr, getBytes32 } from '../utils/ethUtils'
 import { ethToWei, getBytes32 } from '../utils/ethUtils'
  
@@ -67,6 +69,7 @@ export default {
       batchDesc: '目标地址，最多20个，使用逗号隔开',
       singleDesc: '目标地址（只能填写一个）',
       contract: {},
+      currentContractName: '',
       currentNet: 'DataCenterTest',
       //currentNet: 'Testnet',
       address: {
@@ -79,7 +82,11 @@ export default {
           baseUrl: 'https://testnet.io'
         },
         DataCenterTest: {
-          contractAddress: '0xac659dbd50c7b629cf16081e1223af8919441cb0',
+          contractAddress: '0xb07995759885185035a5c41fe202a4fd112d75f2',
+          baseUrl: 'https://testnet.io'
+        },
+        AddressResolverTest: {
+          contractAddress: '0x282b192518fc09568de0E66Df8e2533f88C16672',
           baseUrl: 'https://testnet.io'
         }
       }
@@ -144,16 +151,22 @@ export default {
     handleCommand(command) {
       if (command == 'a') {
         this.currentNet = 'Mainnet'
+        this.contract = new Web3Service.web3.eth.Contract(OriginSportToken.abi, this.address[this.currentNet].contractAddress);
       } else if (command == 'b') {
         this.currentNet = 'Testnet'
-      } else {
+        this.contract = new Web3Service.web3.eth.Contract(OriginSportToken.abi, this.address[this.currentNet].contractAddress);
+      } else if (command == 'c') {
         this.currentNet = 'DataCenterTest'
+        this.contract = new Web3Service.web3.eth.Contract(DataCenterJson.abi, this.address[this.currentNet].contractAddress);
+      } else {
+        this.currentNet = 'AddressResolverTest'
+        this.contract = new Web3Service.web3.eth.Contract(AddressResolverJson.abi, this.address[this.currentNet].contractAddress);
       }
-      this.instantiateContract()
     },
     callFunction(data) {
       this.callFunc(data)
         .then((data) => {
+          console.log(data)
           this.$notify({
             message: data,
             type: 'success'
@@ -191,6 +204,13 @@ export default {
         if (this.currentNet === 'DataCenterTest') {
           sendArgs[0] = getBytes32(sendArgs[0])
         }
+        this.contract.methods[sendFunction](...sendArgs).estimateGas({from: Web3Service.selectedAccount})
+          .then(gasAmount => {
+            console.log('estimate gas: ', gasAmount)
+          })
+          .catch(err => {
+            console.log('estimate gas occur error: ', err)
+          })
         func = this.contract.methods[sendFunction](...sendArgs)
       } else {
         func = this.contract.methods[sendFunction]()
