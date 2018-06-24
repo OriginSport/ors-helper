@@ -142,10 +142,10 @@ export default {
     },
     async instantiateContract() {
       // const account = Web3Service.selectedAccount;
-      if (this.currentNet !== 'DataCenterTest') {
-        this.contract = new Web3Service.web3.eth.Contract(OriginSportToken.abi, this.address[this.currentNet].contractAddress);
-      } else {
+      if (this.currentNet == 'DataCenterTest') {
         this.contract = new Web3Service.web3.eth.Contract(DataCenterJson.abi, this.address[this.currentNet].contractAddress);
+      } else {
+        this.contract = new Web3Service.web3.eth.Contract(OriginSportToken.abi, this.address[this.currentNet].contractAddress);
       }
     },
     handleCommand(command) {
@@ -186,7 +186,7 @@ export default {
       }
     },
     sendFunc(data) {
-      console.log(data)
+      console.log('send func', data)
       const value = 0
       const sendFunction = data.func
 
